@@ -157,8 +157,51 @@
       display: none; margin-top: 10px; font-size: 0.82rem; color: var(--accent);
     }
     .loader.on { display: block; }
+    .sponsors {
+      margin-top: 28px;
+      padding: 20px 18px 8px;
+      border-top: 1px solid var(--border);
+    }
+    .sponsors h3 {
+      margin: 0 0 14px;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      text-align: center;
+    }
+    .sponsor-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 28px 36px;
+    }
+    .sponsor {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      opacity: 0.92;
+      text-decoration: none;
+      color: #e8eef7;
+    }
+    .sponsor:hover { opacity: 1; }
+    .sponsor img {
+      display: block;
+      height: 28px;
+      width: auto;
+      max-width: 140px;
+      object-fit: contain;
+    }
+    .sponsor.nvidia img { height: 32px; }
+    .sponsor.vast img { height: 30px; }
+    .sponsor.coreweave img { height: 26px; filter: brightness(0) invert(1); }
+    .sponsor.wandb img { height: 30px; }
+    .sponsor.cursor img { height: 26px; }
     @media (max-width: 960px) {
       .layout { grid-template-columns: 1fr; }
+      .sponsor img { height: 24px; max-width: 110px; }
     }
   </style>
 </head>
@@ -256,11 +299,35 @@
       </div>
       <div id="searchResults" class="search-results"></div>
     </section>
+
+    <footer class="sponsors" aria-label="Event sponsors">
+      <h3>Built with · event sponsors</h3>
+      <div class="sponsor-row">
+        <a class="sponsor vast" href="https://www.vastdata.com" target="_blank" rel="noopener noreferrer" title="VAST Data">
+          <img data-logo="logos/vast-data.svg" alt="VAST Data" />
+        </a>
+        <a class="sponsor nvidia" href="https://www.nvidia.com" target="_blank" rel="noopener noreferrer" title="NVIDIA">
+          <img data-logo="logos/nvidia.svg" alt="NVIDIA" />
+        </a>
+        <a class="sponsor wandb" href="https://wandb.ai" target="_blank" rel="noopener noreferrer" title="Weights &amp; Biases">
+          <img data-logo="logos/wandb.svg" alt="Weights &amp; Biases" />
+        </a>
+        <a class="sponsor coreweave" href="https://www.coreweave.com" target="_blank" rel="noopener noreferrer" title="CoreWeave">
+          <img data-logo="logos/coreweave.svg" alt="CoreWeave" />
+        </a>
+        <a class="sponsor cursor" href="https://cursor.com" target="_blank" rel="noopener noreferrer" title="Cursor">
+          <img data-logo="logos/cursor.svg" alt="Cursor" />
+        </a>
+      </div>
+    </footer>
   </div>
 
   <script>
     const APP_PREFIX = window.location.pathname.startsWith("/app") ? "/app" : "";
     document.getElementById("briefingLink").href = `${APP_PREFIX}/briefing`;
+    document.querySelectorAll("img[data-logo]").forEach((img) => {
+      img.src = `${APP_PREFIX}/${img.dataset.logo}`;
+    });
     const STEP_LABELS = {
       event_understood: "Understand event (Cosmos + YOLO)",
       archive_searched: "Search VAST archive",

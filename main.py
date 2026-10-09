@@ -112,6 +112,16 @@ def briefing_hero_image():
     return jsonify({"error": "image missing"}), 404
 
 
+@app.get("/logos/<path:filename>")
+def sponsor_logo(filename):
+    # Prefer logos/, but allow flat ConfigMap mounts (filename only under /code).
+    name = Path(filename).name
+    for base in (APP_DIR / "logos", APP_DIR):
+        if (base / name).is_file():
+            return send_from_directory(base, name)
+    return jsonify({"error": "logo missing"}), 404
+
+
 @app.get("/api/clips")
 def api_clips():
     clips = []
