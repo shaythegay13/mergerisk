@@ -57,8 +57,15 @@
       font-size: 0.78rem; color: var(--muted);
     }
     .status-bar strong { color: var(--text); }
-    .grid-top { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 16px; }
+    .layout {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .col-left, .col-right { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
     .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .panel-pad { padding: 14px 16px; }
     .video-wrap { position: relative; background: #000; aspect-ratio: 16/10; }
     video { width: 100%; height: 100%; object-fit: contain; background: #000; display: block; }
     #detCanvas {
@@ -98,20 +105,19 @@
     .btn.secondary {
       margin-top: 8px; background: #1e293b; border: 1px solid var(--border);
     }
-    section { margin-top: 16px; }
     section h3 {
       margin: 0 0 10px; font-size: 0.95rem; text-transform: uppercase;
       letter-spacing: 0.06em; color: var(--muted);
     }
-    .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    .steps { display: grid; grid-template-columns: 1fr; gap: 6px; }
     .step {
-      padding: 10px; border-radius: 8px; border: 1px solid var(--border);
-      font-size: 0.72rem; color: var(--muted); min-height: 56px; line-height: 1.35;
+      padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+      font-size: 0.72rem; color: var(--muted); line-height: 1.35;
     }
     .step.done { border-color: #166534; color: #bbf7d0; background: #0f1f16; }
     .step.active { border-color: var(--accent); color: #e0f2fe; background: #0c1f2e; }
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .similar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .similar { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    .bottom-explore { margin-top: 16px; }
     .card {
       border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
       background: #0e1520; cursor: pointer; transition: border-color 0.15s;
@@ -121,7 +127,7 @@
     .card-body { padding: 10px 12px; font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
     .card-body strong { color: var(--text); display: block; margin-bottom: 4px; font-size: 0.72rem; }
     .alert-box {
-      margin-top: 16px; padding: 16px 18px; border-radius: 12px;
+      padding: 16px 18px; border-radius: 12px;
       border: 1px solid #7f1d1d; background: linear-gradient(180deg, #1f1010, #140c0c);
     }
     .alert-box.medium { border-color: #92400e; background: linear-gradient(180deg, #1a1408, #120e06); }
@@ -143,7 +149,8 @@
     .meta { font-size: 0.72rem; color: var(--muted); margin-top: 8px; line-height: 1.4; }
     .evidence-list { font-size: 0.82rem; color: var(--muted); margin: 0; padding-left: 18px; }
     .evidence-list li { margin: 4px 0; }
-    .alert-history { max-height: 200px; overflow: auto; font-size: 0.78rem; }
+    .alert-history { max-height: 160px; overflow: auto; font-size: 0.78rem; }
+    .similar-scroll { max-height: 420px; overflow: auto; }
     .alert-item { padding: 8px 0; border-bottom: 1px solid var(--border); }
     .alert-item strong { color: var(--text); }
     .loader {
@@ -151,7 +158,7 @@
     }
     .loader.on { display: block; }
     @media (max-width: 960px) {
-      .grid-top, .similar, .steps, .two-col { grid-template-columns: 1fr; }
+      .layout { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -180,64 +187,68 @@
       <div id="statusBar" class="status-bar">Loading stack status…</div>
     </header>
 
-    <div class="grid-top">
-      <div class="panel">
-        <div class="video-wrap">
-          <video id="mainVideo" controls playsinline muted preload="metadata"></video>
-          <canvas id="detCanvas"></canvas>
-          <div id="yoloBadge" class="yolo-badge" style="display:none">NVIDIA YOLO11 · detection overlay</div>
-          <div id="videoLabel" class="video-label">warehouse3 · sdg_warehouse_cam-2</div>
+    <div class="layout">
+      <div class="col-left">
+        <div class="panel">
+          <div class="video-wrap">
+            <video id="mainVideo" controls playsinline muted preload="metadata"></video>
+            <canvas id="detCanvas"></canvas>
+            <div id="yoloBadge" class="yolo-badge" style="display:none">NVIDIA YOLO11 · detection overlay</div>
+            <div id="videoLabel" class="video-label">warehouse3 · sdg_warehouse_cam-2</div>
+          </div>
+        </div>
+
+        <div class="panel side">
+          <h2 id="eventTitle">Live warehouse aisle monitoring</h2>
+          <div id="severityBadge" class="severity MEDIUM" style="display:none">MEDIUM</div>
+          <ul id="eventChecks" class="checks"></ul>
+          <button id="investigateBtn" class="btn">Run agent investigation</button>
+          <p id="loader" class="loader">Agent running: metadata → VAST search → similar clips → W&amp;B analysis…</p>
+          <p id="captionAttribution" class="meta" style="display:none">Video understanding · NVIDIA Cosmos (segment caption via VSS index)</p>
+          <p id="searchMeta" class="meta"></p>
+          <ul id="evidenceList" class="evidence-list"></ul>
+          <div style="margin-top:14px">
+            <h3>Agent investigation pipeline</h3>
+            <div id="agentSteps" class="steps"></div>
+          </div>
+          <section id="conclusion" class="alert-box" style="display:none; margin-top:14px">
+            <h3 id="conclusionTitle">⚠ Safety conclusion</h3>
+            <p id="patternSummary"></p>
+            <p id="recommendation"></p>
+            <div id="alertCreated" class="alert-created"></div>
+            <p id="reasoningMeta" class="meta"></p>
+          </section>
         </div>
       </div>
-      <div class="panel side">
-        <h2 id="eventTitle">Live warehouse aisle monitoring</h2>
-        <div id="severityBadge" class="severity MEDIUM" style="display:none">MEDIUM</div>
-        <ul id="eventChecks" class="checks"></ul>
-        <button id="investigateBtn" class="btn">Run agent investigation</button>
-        <p id="loader" class="loader">Agent running: metadata → VAST search → similar clips → W&amp;B analysis…</p>
-        <p id="captionAttribution" class="meta" style="display:none">Video understanding · NVIDIA Cosmos (segment caption via VSS index)</p>
-        <p id="searchMeta" class="meta"></p>
-        <ul id="evidenceList" class="evidence-list"></ul>
+
+      <div class="col-right">
+        <section class="panel panel-pad">
+          <h3 style="margin-top:0">Similar incidents (VAST archive + curated history)</h3>
+          <div class="similar-scroll">
+            <div id="similarGrid" class="similar"></div>
+          </div>
+        </section>
+
+        <section class="panel panel-pad">
+          <h3 style="margin-top:0">Alert log (session)</h3>
+          <div id="alertHistory" class="alert-history"><span class="meta">No alerts yet — run investigation.</span></div>
+        </section>
+
+        <section class="panel panel-pad">
+          <h3 style="margin-top:0">Ask the archive (VAST agent)</h3>
+          <p class="meta" style="margin:0 0 8px">Grounded Q&amp;A over indexed warehouse footage · VAST Data</p>
+          <div class="search-row">
+            <input id="askInput" placeholder="Ask about warehouse safety…" value="Have workers been near moving forklifts on sdg_warehouse_cam-2?" />
+            <button id="askBtn">Ask</button>
+          </div>
+          <p id="askAnswer" class="meta" style="margin-top:10px"></p>
+          <div id="askEvidence" class="search-results"></div>
+        </section>
       </div>
     </div>
 
-    <section class="panel" style="padding:14px 16px">
-      <h3>Agent investigation pipeline</h3>
-      <div id="agentSteps" class="steps"></div>
-    </section>
-
-    <section>
-      <h3>Similar incidents (VAST archive + curated history)</h3>
-      <div id="similarGrid" class="similar"></div>
-    </section>
-
-    <div class="two-col">
-      <section id="conclusion" class="alert-box" style="display:none">
-        <h3 id="conclusionTitle">⚠ Safety conclusion</h3>
-        <p id="patternSummary"></p>
-        <p id="recommendation"></p>
-        <div id="alertCreated" class="alert-created"></div>
-        <p id="reasoningMeta" class="meta"></p>
-      </section>
-      <section class="panel" style="padding:14px 16px">
-        <h3 style="margin-top:0">Alert log (session)</h3>
-        <div id="alertHistory" class="alert-history"><span class="meta">No alerts yet — run investigation.</span></div>
-      </section>
-    </div>
-
-    <section class="panel" style="padding:14px 16px">
-      <h3>Ask the archive (VAST agent)</h3>
-      <p class="meta" style="margin:0 0 8px">Grounded Q&amp;A over indexed warehouse footage · VAST Data</p>
-      <div class="search-row">
-        <input id="askInput" placeholder="Ask about warehouse safety…" value="Have workers been near moving forklifts on sdg_warehouse_cam-2?" />
-        <button id="askBtn">Ask</button>
-      </div>
-      <p id="askAnswer" class="meta" style="margin-top:10px"></p>
-      <div id="askEvidence" class="search-results"></div>
-    </section>
-
-    <section class="panel" style="padding:14px 16px">
-      <h3>Explore warehouse archive</h3>
+    <section class="panel panel-pad bottom-explore">
+      <h3 style="margin-top:0">Explore warehouse archive</h3>
       <p class="meta" style="margin:0 0 8px">Semantic / hybrid search · VAST Data</p>
       <div class="search-row">
         <input id="searchInput" placeholder="Natural-language search…" value="worker close to forklift in aisle" />
