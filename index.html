@@ -29,6 +29,13 @@
     .header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
     .brand { font-size: 1.45rem; font-weight: 700; letter-spacing: 0.06em; }
     .tagline { margin: 6px 0 0; font-size: 0.92rem; color: var(--muted); max-width: 640px; line-height: 1.45; }
+    .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .nav-link {
+      color: var(--muted); text-decoration: none; font-size: 0.8rem; font-weight: 600;
+      border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px;
+      background: #0e1520;
+    }
+    .nav-link:hover { color: var(--text); border-color: #3a4f6a; }
     .status-pill {
       display: inline-flex; align-items: center; gap: 8px;
       padding: 6px 14px; border-radius: 999px;
@@ -165,7 +172,10 @@
             <span class="chip">Agent reasoning · Weights &amp; Biases</span>
           </div>
         </div>
-        <div id="statusPill" class="status-pill"><span class="dot"></span> MONITORING</div>
+        <div class="header-right">
+          <a class="nav-link" id="briefingLink" href="/briefing">Team briefing</a>
+          <div id="statusPill" class="status-pill"><span class="dot"></span> MONITORING</div>
+        </div>
       </div>
       <div id="statusBar" class="status-bar">Loading stack status…</div>
     </header>
@@ -239,6 +249,7 @@
 
   <script>
     const APP_PREFIX = window.location.pathname.startsWith("/app") ? "/app" : "";
+    document.getElementById("briefingLink").href = `${APP_PREFIX}/briefing`;
     const STEP_LABELS = {
       event_understood: "Understand event (Cosmos + YOLO)",
       archive_searched: "Search VAST archive",

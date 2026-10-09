@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AisleGuard — Team Briefing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b1117;
+      --panel: #121a24;
+      --border: #243044;
+      --text: #e8eef7;
+      --muted: #8fa3bf;
+      --ok: #22c55e;
+      --accent: #38bdf8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", system-ui, sans-serif;
+      background: radial-gradient(1200px 600px at 10% -10%, #1a2740 0%, var(--bg) 55%);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.55;
+    }
+    .shell { max-width: 920px; margin: 0 auto; padding: 20px 24px 56px; }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 28px; flex-wrap: wrap;
+    }
+    .brand { font-size: 1.35rem; font-weight: 700; letter-spacing: 0.04em; }
+    .nav-link {
+      color: var(--muted); text-decoration: none; font-size: 0.9rem; font-weight: 500;
+      border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px;
+      background: var(--panel);
+    }
+    .nav-link:hover { color: var(--text); border-color: #3a4f6a; }
+    .hero-label {
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
+    }
+    h1 {
+      margin: 0 0 10px; font-size: clamp(1.6rem, 3vw, 2rem); font-weight: 700;
+      letter-spacing: -0.02em; line-height: 1.2;
+    }
+    .lede { color: var(--muted); font-size: 1.05rem; margin: 0 0 16px; max-width: 62ch; }
+    .updated {
+      display: inline-block; margin-bottom: 24px;
+      font-size: 0.8rem; font-weight: 600; color: #86efac;
+      border: 1px solid #1f5c36; background: #0f1f16;
+      border-radius: 6px; padding: 4px 10px;
+    }
+    .toc { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; }
+    .toc a {
+      color: var(--text); text-decoration: none; font-size: 0.8rem; font-weight: 600;
+      padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border);
+      background: #0e1520;
+    }
+    .toc a:hover { border-color: var(--accent); color: #bae6fd; }
+    section {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 22px 24px; margin-bottom: 16px;
+    }
+    section h2 { margin: 0 0 6px; font-size: 1.15rem; font-weight: 700; }
+    section .sub { margin: 0 0 18px; color: var(--muted); font-size: 0.9rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td {
+      text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    th {
+      color: var(--muted); font-size: 0.72rem; text-transform: uppercase;
+      letter-spacing: 0.06em; font-weight: 600;
+    }
+    tr:last-child td { border-bottom: none; }
+    td:first-child { font-weight: 600; color: #bae6fd; width: 28%; }
+    ol.flow, ul.bullets { margin: 0; padding-left: 1.25rem; }
+    ol.flow li, ul.bullets li { margin-bottom: 10px; }
+    ol.flow li::marker { font-weight: 700; color: var(--accent); }
+    .muted { color: var(--muted); }
+    .priority { display: grid; gap: 12px; }
+    .prio-card {
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; background: #0e1520;
+    }
+    .prio-card.high { border-color: #7f1d1d; background: linear-gradient(180deg, #1f1010, #0e1520); }
+    .prio-card.mid { border-color: #92400e; background: linear-gradient(180deg, #1f160a, #0e1520); }
+    .prio-num {
+      display: inline-block; font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px;
+    }
+    .prio-card.high .prio-num { color: #fecaca; }
+    .prio-card.mid .prio-num { color: #fde68a; }
+    .prio-card h3 { margin: 0 0 8px; font-size: 1rem; }
+    .prio-card p, .prio-card li { font-size: 0.9rem; color: var(--muted); margin: 0; }
+    .prio-card ul { margin: 8px 0 0; padding-left: 1.2rem; }
+    .prio-card li { margin-bottom: 6px; }
+    .skip-box {
+      border: 1px dashed #3a4f6a; border-radius: 10px; padding: 14px 16px;
+      margin-top: 12px;
+    }
+    .skip-box h3 { margin: 0 0 8px; font-size: 0.95rem; color: var(--muted); }
+    .bottom-line {
+      border: 1px solid #1f5c36; border-radius: 12px; padding: 18px 20px;
+      background: linear-gradient(180deg, #0f1f16, #0e1520); margin-top: 8px;
+    }
+    .bottom-line h2 { margin: 0 0 8px; color: #bbf7d0; font-size: 1.05rem; }
+    .bottom-line p { margin: 0; color: #86efac; font-size: 0.95rem; }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85em; background: #0b1117; border: 1px solid var(--border);
+      border-radius: 4px; padding: 1px 6px; color: #93c5fd;
+    }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; }
+    .chip {
+      font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 6px; border: 1px solid #1e4a6e; color: #bae6fd;
+      background: #0c1f2e;
+    }
+    @media (max-width: 640px) {
+      td:first-child { width: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">AISLEGUARD</div>
+      <a class="nav-link" id="backLink" href="./">← Back to demo</a>
+    </header>
+
+    <p class="hero-label">Team briefing · VAST Builders Challenge</p>
+    <h1>Current stack, what it does, focus for submission</h1>
+    <p class="lede">
+      Shared context after the latest AisleGuard upgrades (YOLO overlays, status bar,
+      Ask the archive, partner audit UI). Use this page before the live demo.
+    </p>
+    <span class="updated">Updated for ~1.5 hours to submission · matches commit 19543ae + local briefing routes</span>
+
+    <nav class="toc" aria-label="On this page">
+      <a href="#stack">Tech stack</a>
+      <a href="#does">What it does</a>
+      <a href="#partners">Partner map</a>
+      <a href="#next">Focus next (~1.5 hrs)</a>
+      <a href="#bottom">Bottom line</a>
+    </nav>
+
+    <section id="stack">
+      <h2>Current tech stack</h2>
+      <p class="sub">Thin Flask app on the pre-running VAST / NVIDIA / W&amp;B / CoreWeave builders stack.</p>
+      <div class="chip-row">
+        <span class="chip">VAST Data</span>
+        <span class="chip">NVIDIA Cosmos</span>
+        <span class="chip">NVIDIA YOLO11</span>
+        <span class="chip">Weights &amp; Biases</span>
+        <span class="chip">CoreWeave (GPU)</span>
+        <span class="chip">Cursor (build)</span>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Technology</th><th>In this app</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>App server</td>
+            <td>Flask + <code>requests</code> + <code>openai</code></td>
+            <td><code>main.py</code> — API, video proxy, in-memory alert log</td>
+          </tr>
+          <tr>
+            <td>UI</td>
+            <td>Vanilla HTML/JS (<code>index.html</code>)</td>
+            <td>Status bar, investigate flow, YOLO canvas overlay, Ask / Search</td>
+          </tr>
+          <tr>
+            <td>VAST VSS</td>
+            <td>JWT retrieval API</td>
+            <td>Login, hybrid search, metadata, stream, dashboard stats, agent Q&amp;A</td>
+          </tr>
+          <tr>
+            <td>NVIDIA Cosmos</td>
+            <td>Cosmos3-Reason captions (+ Embed1 via search)</td>
+            <td>Reads <code>reasoning_content</code> from segment metadata — not authored in-app</td>
+          </tr>
+          <tr>
+            <td>NVIDIA YOLO11</td>
+            <td>Ingest-time detections</td>
+            <td><code>detections.py</code> + bbox overlay; person reliable; forklift not a YOLO class here</td>
+          </tr>
+          <tr>
+            <td>W&amp;B Inference</td>
+            <td>Serverless (<code>gpt-oss-120b</code> default)</td>
+            <td>Structured risk JSON; fallback if unreachable</td>
+          </tr>
+          <tr>
+            <td>CoreWeave</td>
+            <td>GPU compute (challenge infra)</td>
+            <td>Indirect — Cosmos / YOLO / Embed / W&amp;B run on CoreWeave-backed GPUs</td>
+          </tr>
+          <tr>
+            <td>Deploy</td>
+            <td>K8s ConfigMap + <code>python:3.12-slim</code></td>
+            <td>Workshop App button → Ingress <code>/app</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="does">
+      <h2>What it appears to do</h2>
+      <p class="sub">Warehouse safety agent: detect worker–equipment proximity risk, search history, reason, alert.</p>
+      <ol class="flow">
+        <li>
+          <strong>Status bar</strong> — VSS connected?, archive clip counts, W&amp;B inference ready
+          (<code>GET /api/status</code>).
+        </li>
+        <li>
+          <strong>Primary clip</strong> — Curated warehouse aisle segment with optional
+          <strong>YOLO person bbox overlay</strong> on the video.
+        </li>
+        <li>
+          <strong>Run agent investigation</strong>
+          <ul class="bullets" style="margin-top:8px">
+            <li>Refresh Cosmos captions + YOLO evidence for the event</li>
+            <li>Hybrid search the VAST archive for similar proximity moments</li>
+            <li>Show three curated historical incidents with live similarity when available</li>
+            <li>W&amp;B (or fallback) → severity, recurring pattern, recommendation</li>
+            <li>Create a safety alert (kept in an in-memory log, <code>GET /api/alerts</code>)</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Optional</strong> — <em>Ask the archive</em> (VAST agent Q&amp;A) or
+          <em>Search VAST</em> for free-form hybrid retrieval.
+        </li>
+      </ol>
+      <p class="muted" style="margin:16px 0 0; font-size:0.9rem">
+        Demo story for judges: <strong style="color:var(--text)">search → reason → act</strong>,
+        with each partner visible on screen.
+      </p>
+    </section>
+
+    <section id="partners">
+      <h2>Partner map (what to point at live)</h2>
+      <p class="sub">From the verification checklist in the README — say these out loud in the demo.</p>
+      <table>
+        <thead>
+          <tr><th>Partner</th><th>Shown?</th><th>Where</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>VAST Data</td>
+            <td>Yes</td>
+            <td>Status bar counts; search hits; similar clip playback; Ask / Search</td>
+          </tr>
+          <tr>
+            <td>NVIDIA Cosmos</td>
+            <td>Yes</td>
+            <td>Event captions after investigate; “Video understanding” chip</td>
+          </tr>
+          <tr>
+            <td>NVIDIA YOLO11</td>
+            <td>Partial</td>
+            <td>Person bbox overlay + object counts (forklift via Cosmos/search, not YOLO class)</td>
+          </tr>
+          <tr>
+            <td>Weights &amp; Biases</td>
+            <td>Yes*</td>
+            <td>Conclusion “Agent reasoning · W&amp;B” when <code>analysis_source: wandb</code></td>
+          </tr>
+          <tr>
+            <td>CoreWeave</td>
+            <td>Indirect</td>
+            <td>Accurate claim: GPU inference on CoreWeave-backed endpoints</td>
+          </tr>
+          <tr>
+            <td>Cursor</td>
+            <td>Dev only</td>
+            <td>README “Built with” — not a runtime dependency</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="muted" style="margin:12px 0 0; font-size:0.85rem">
+        *Confirm W&amp;B is green in the status bar before judges walk up.
+      </p>
+    </section>
+
+    <section id="next">
+      <h2>What to focus on next (~1.5 hours)</h2>
+      <p class="sub">Feature work is largely done. Spend remaining time on deploy reliability and rehearsal — not new code.</p>
+
+      <div class="priority">
+        <div class="prio-card high">
+          <div class="prio-num">Priority 1 · Do now</div>
+          <h3>Ship a rock-solid live App URL</h3>
+          <ul>
+            <li>Deploy / redeploy to K8s <code>/app</code> so the workshop <strong>App</strong> button works (not only localhost).</li>
+            <li>Include this briefing page + <code>/briefing</code> route in that deploy (local-only until pushed/redeployed).</li>
+            <li>Open App → status bar: VSS connected, clip counts &gt; 0, W&amp;B reachable.</li>
+            <li>Confirm curated clips still play (hardcoded <code>team-2</code> / <code>warehouse3</code> / <code>sdg_warehouse_cam-2</code>).</li>
+            <li>One full Investigate run end-to-end; note if reasoning says <code>wandb</code> vs <code>fallback</code>.</li>
+          </ul>
+        </div>
+
+        <div class="prio-card mid">
+          <div class="prio-num">Priority 2 · Rehearse (~15 min)</div>
+          <h3>~90-second demo script</h3>
+          <ul>
+            <li>Point at partner chips + status bar.</li>
+            <li>Play primary clip → call out YOLO boxes if visible.</li>
+            <li>Investigate → narrate Cosmos caption → VAST search → W&amp;B pattern → alert.</li>
+            <li>Optional flourish: one Ask-the-archive or Search VAST query.</li>
+            <li>If search is empty: blame filters / ingest lag, don’t debug live.</li>
+          </ul>
+        </div>
+
+        <div class="prio-card">
+          <div class="prio-num" style="color:var(--accent)">Priority 3 · Only if green with time</div>
+          <h3>Tiny polish (pick at most one)</h3>
+          <ul>
+            <li>Persist alerts to VastDB so the “act” story survives pod restarts.</li>
+            <li>Push briefing + any local fixes to GitHub so the team shares one source of truth.</li>
+            <li>Screenshot / short screen recording as submission backup.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="skip-box">
+        <h3>Skip</h3>
+        <p class="muted" style="margin:0; font-size:0.9rem">
+          New agent features, UI redesign, forklift YOLO fine-tuning, multi-camera dashboards,
+          redeploying VSS. The demo upgrades already cover the partner audit path.
+        </p>
+      </div>
+    </section>
+
+    <div class="bottom-line" id="bottom">
+      <h2>Bottom line</h2>
+      <p>
+        Product is demo-ready. With ~1.5 hours left: get <code style="border-color:#166534;color:#bbf7d0">/app</code>
+        healthy, prove W&amp;B + video + Investigate once, rehearse the partner walkthrough,
+        submit. New features are optional; a clean live run is not.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const APP_PREFIX = window.location.pathname.startsWith("/app") ? "/app" : "";
+    document.getElementById("backLink").href = `${APP_PREFIX}/`;
+  </script>
+</body>
+</html>

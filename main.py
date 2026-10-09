@@ -92,6 +92,15 @@ def index():
     return jsonify({"ok": True, "service": "aisleguard"})
 
 
+@app.get("/briefing")
+@app.get("/briefing.html")
+def briefing():
+    path = APP_DIR / "briefing.html"
+    if path.is_file():
+        return send_from_directory(APP_DIR, "briefing.html")
+    return jsonify({"error": "briefing page missing"}), 404
+
+
 @app.get("/api/clips")
 def api_clips():
     clips = []

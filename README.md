@@ -89,3 +89,7 @@ Safety Alert
 | **Weights & Biases** | Yes (when reachable) | `analysis_source: wandb` in investigate response; “Agent reasoning · Weights & Biases” in conclusion |
 | **CoreWeave** | Indirect (accurate claim) | README + UI footnote: GPU inference on CoreWeave-backed endpoints |
 | **Cursor** | Dev only | This README “Built with” section |
+
+## Team briefing
+
+In-app page for teammates: **`GET /briefing`** (linked as “Team briefing” in the header). Covers stack, demo flow, and pre-submit focus.
