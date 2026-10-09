@@ -7,6 +7,12 @@ import requests
 
 from clips import SEARCH_QUERY, SEARCH_SETTINGS
 
+AGENT_ASK_FILTERS = {
+    "time_filter": SEARCH_SETTINGS.get("time_filter", "all"),
+    "metadata_filters": SEARCH_SETTINGS.get("metadata_filters"),
+    "top_k": 8,
+}
+
 REQUEST_TIMEOUT = 60
 
 
@@ -82,6 +88,51 @@ class VssClient:
         )
         return resp.json()
 
+    def get_detections(self, source):
+        try:
+            resp = self._request(
+                "GET",
+                "/api/v1/videos/detections",
+                params={"source": source},
+            )
+            return resp.json()
+        except requests.RequestException:
+            return None
+
+    def agent_search_and_answer(self, query):
+        body = {
+            "query": query,
+            **AGENT_ASK_FILTERS,
+        }
+        try:
+            resp = self._request(
+                "POST",
+                "/api/v1/agent/search-and-answer",
+                json=body,
+            )
+            return resp.json()
+        except requests.RequestException as exc:
+            return {"error": str(exc), "answer": None, "evidence": {}}
+
+    def dashboard_overview(self):
+        try:
+            resp = self._request(
+                "GET",
+                "/api/v1/dashboard/stats",
+                params={"scope": "all"},
+            )
+            data = resp.json()
+            overview = data.get("overview") or {}
+            objects = data.get("objects") or []
+            return {
+                "indexed_clips": overview.get("indexed_clips"),
+                "unique_videos": overview.get("unique_videos"),
+                "fully_indexed_videos": overview.get("fully_indexed_videos"),
+                "top_objects": objects[:6],
+            }
+        except requests.RequestException:
+            return {}
+
     def search_similar_events(self, query=None):
         query = query or SEARCH_QUERY
         body = {
@@ -127,6 +178,7 @@ def enrich_clip(vss, clip):
         meta = vss.get_segment_metadata(clip["source"])
         if meta.get("reasoning_content"):
             out["description"] = meta["reasoning_content"]
+            out["caption_source"] = "cosmos3_reason"
         for key in (
             "filename",
             "original_video",

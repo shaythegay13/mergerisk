@@ -15,8 +15,28 @@ SYSTEM_PROMPT = (
     "video evidence. Do not infer intent, blame, injury, recklessness, or facts not "
     "present in the descriptions. Determine whether the current worker/forklift "
     "interaction appears significant and whether the archive indicates a recurring "
-    "pattern. Return strict JSON only."
+    "pattern.\n\n"
+    "Return one JSON object only (no markdown, no prose) with exactly these keys:\n"
+    '- "severity": "LOW" | "MEDIUM" | "HIGH"\n'
+    '- "observable_reasons": array of short strings grounded in the descriptions\n'
+    '- "recurring_pattern": boolean\n'
+    '- "pattern_summary": string\n'
+    '- "recommendation": string\n'
+    '- "should_create_alert": boolean'
 )
+
+
+def _assistant_text(message):
+    text = (message.content or "").strip()
+    if text:
+        return text
+    reasoning = getattr(message, "reasoning", None)
+    if reasoning:
+        return str(reasoning).strip()
+    extra = getattr(message, "model_extra", None) or {}
+    if extra.get("reasoning"):
+        return str(extra["reasoning"]).strip()
+    return ""
 
 
 def _parse_json(text):
@@ -82,10 +102,11 @@ def _fallback(primary, similar, search_summary, base_reasons):
     }
 
 
-def run_reasoning(primary, similar, search):
+def run_reasoning(primary, similar, search, detections=None):
     api_key = os.environ.get("WANDB_API_KEY")
-    team = os.environ.get("WANDB_TEAM", "")
-    project = os.environ.get("WANDB_PROJECT", "")
+    # Optional billing/routing scope — must match W&B Playground exactly. A wrong
+    # OpenAI-Project value yields 401 invalid_api_key even with a valid API key.
+    openai_project = os.environ.get("WANDB_OPENAI_PROJECT", "").strip()
     base_reasons = _observable_reasons(primary.get("description", ""))
 
     payload = {
@@ -106,6 +127,11 @@ def run_reasoning(primary, similar, search):
                 for r in (search.get("results") or [])[:5]
             ],
         },
+        "yolo_evidence": {
+            "proximity_signal": (detections or {}).get("proximity_signal"),
+            "co_presence_frames": (detections or {}).get("co_presence_frames"),
+            "object_counts": (detections or {}).get("object_counts"),
+        },
     }
 
     if not api_key:
@@ -113,13 +139,13 @@ def run_reasoning(primary, similar, search):
         return _fallback(primary, similar, search, base_reasons)
 
     try:
-        headers = {}
-        if team and project:
-            headers["OpenAI-Project"] = f"{team}/{project}"
+        default_headers = (
+            {"OpenAI-Project": openai_project} if openai_project else None
+        )
         client = OpenAI(
             api_key=api_key,
             base_url=WANDB_BASE,
-            default_headers=headers or None,
+            default_headers=default_headers,
             timeout=90,
         )
         completion = client.chat.completions.create(
@@ -134,13 +160,33 @@ def run_reasoning(primary, similar, search):
             temperature=0.1,
             max_tokens=700,
         )
-        parsed = _parse_json(completion.choices[0].message.content)
+        parsed = _parse_json(_assistant_text(completion.choices[0].message))
         parsed["analysis_source"] = "wandb"
+        parsed["model"] = WANDB_MODEL
+        parsed = _apply_yolo_guardrails(parsed, detections)
         return parsed
     except Exception as exc:  # noqa: BLE001
         logger.warning("W&B inference failed: %s", exc)
         out = _fallback(primary, similar, search, base_reasons)
+        out["model"] = None
         return out
+
+
+def _apply_yolo_guardrails(parsed, detections):
+    if not detections or not detections.get("proximity_signal"):
+        return parsed
+    reasons = list(parsed.get("observable_reasons") or [])
+    note = "YOLO: person and equipment co-detected in the same frame(s)"
+    if note not in reasons:
+        reasons.insert(0, note)
+    parsed["observable_reasons"] = reasons[:8]
+    if parsed.get("severity") == "LOW" and (
+        parsed.get("recurring_pattern") or detections.get("co_presence_frames", 0) >= 3
+    ):
+        parsed["severity"] = "MEDIUM"
+    if parsed.get("recurring_pattern") and not parsed.get("should_create_alert"):
+        parsed["should_create_alert"] = True
+    return parsed
 
 
 def _observable_reasons(description):

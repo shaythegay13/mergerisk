@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AisleGuard</title>
+  <title>AisleGuard — Warehouse proximity agent</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -14,6 +14,7 @@
       --text: #e8eef7;
       --muted: #8fa3bf;
       --ok: #22c55e;
+      --accent: #38bdf8;
     }
     * { box-sizing: border-box; }
     body {
@@ -23,25 +24,49 @@
       color: var(--text);
       min-height: 100vh;
     }
-    .shell { max-width: 1200px; margin: 0 auto; padding: 20px 24px 40px; }
-    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-    .brand { font-size: 1.35rem; font-weight: 700; letter-spacing: 0.04em; }
+    .shell { max-width: 1240px; margin: 0 auto; padding: 20px 24px 48px; }
+    header { margin-bottom: 12px; }
+    .header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .brand { font-size: 1.45rem; font-weight: 700; letter-spacing: 0.06em; }
+    .tagline { margin: 6px 0 0; font-size: 0.92rem; color: var(--muted); max-width: 640px; line-height: 1.45; }
     .status-pill {
       display: inline-flex; align-items: center; gap: 8px;
       padding: 6px 14px; border-radius: 999px;
       background: #0f2a1a; border: 1px solid #1f5c36; color: #86efac;
-      font-size: 0.8rem; font-weight: 600;
+      font-size: 0.8rem; font-weight: 600; white-space: nowrap;
     }
     .status-pill.event { background: #2a1a0f; border-color: #7c4a12; color: #fcd34d; }
     .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-    .grid-top { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; }
+    .stack { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 10px; }
+    .chip {
+      font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); color: var(--muted);
+      background: #0e1520;
+    }
+    .chip.on { border-color: #1e4a6e; color: #bae6fd; background: #0c1f2e; }
+    .status-bar {
+      display: flex; flex-wrap: wrap; gap: 16px; padding: 10px 14px; margin-bottom: 14px;
+      background: #0e1520; border: 1px solid var(--border); border-radius: 10px;
+      font-size: 0.78rem; color: var(--muted);
+    }
+    .status-bar strong { color: var(--text); }
+    .grid-top { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 16px; }
     .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
     .video-wrap { position: relative; background: #000; aspect-ratio: 16/10; }
-    video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+    video { width: 100%; height: 100%; object-fit: contain; background: #000; display: block; }
+    #detCanvas {
+      position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+      pointer-events: none;
+    }
     .video-label {
-      position: absolute; left: 12px; bottom: 12px;
-      background: rgba(0,0,0,.65); padding: 4px 10px; border-radius: 6px;
+      position: absolute; left: 12px; bottom: 12px; z-index: 2;
+      background: rgba(0,0,0,.72); padding: 4px 10px; border-radius: 6px;
       font-size: 0.75rem; color: #cbd5e1;
+    }
+    .yolo-badge {
+      position: absolute; right: 12px; top: 12px; z-index: 2;
+      background: rgba(8,47,73,.85); border: 1px solid #0369a1;
+      padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; color: #bae6fd;
     }
     .side { padding: 16px 18px; }
     .side h2 { margin: 0 0 8px; font-size: 1rem; }
@@ -53,7 +78,7 @@
     .severity.MEDIUM { background: #3f2a0a; color: #fde68a; border: 1px solid #92400e; }
     .severity.LOW { background: #0f2a1a; color: #bbf7d0; border: 1px solid #166534; }
     ul.checks { list-style: none; padding: 0; margin: 0; }
-    ul.checks li { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; color: var(--muted); }
+    ul.checks li { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; color: var(--muted); }
     ul.checks li.on { color: var(--text); }
     ul.checks li.on::before { content: "✓ "; color: var(--ok); font-weight: 700; }
     .btn {
@@ -63,27 +88,38 @@
       padding: 12px 16px; font-weight: 600; cursor: pointer;
     }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn.secondary {
+      margin-top: 8px; background: #1e293b; border: 1px solid var(--border);
+    }
     section { margin-top: 16px; }
     section h3 {
       margin: 0 0 10px; font-size: 0.95rem; text-transform: uppercase;
       letter-spacing: 0.06em; color: var(--muted);
     }
-    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
     .step {
       padding: 10px; border-radius: 8px; border: 1px solid var(--border);
-      font-size: 0.78rem; color: var(--muted); min-height: 52px;
+      font-size: 0.72rem; color: var(--muted); min-height: 56px; line-height: 1.35;
     }
     .step.done { border-color: #166534; color: #bbf7d0; background: #0f1f16; }
+    .step.active { border-color: var(--accent); color: #e0f2fe; background: #0c1f2e; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .similar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    .card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: #0e1520; }
-    .card video { aspect-ratio: 16/10; width: 100%; }
+    .card {
+      border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+      background: #0e1520; cursor: pointer; transition: border-color 0.15s;
+    }
+    .card:hover { border-color: #334155; }
+    .card video { aspect-ratio: 16/10; width: 100%; pointer-events: none; }
     .card-body { padding: 10px 12px; font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
     .card-body strong { color: var(--text); display: block; margin-bottom: 4px; font-size: 0.72rem; }
     .alert-box {
       margin-top: 16px; padding: 16px 18px; border-radius: 12px;
       border: 1px solid #7f1d1d; background: linear-gradient(180deg, #1f1010, #140c0c);
     }
+    .alert-box.medium { border-color: #92400e; background: linear-gradient(180deg, #1a1408, #120e06); }
     .alert-box h3 { color: #fecaca; margin: 0 0 8px; }
+    .alert-box.medium h3 { color: #fde68a; }
     .alert-created { margin-top: 12px; font-weight: 700; color: var(--ok); }
     .search-row { display: flex; gap: 8px; margin-top: 8px; }
     .search-row input {
@@ -94,24 +130,52 @@
       background: #1e293b; border: 1px solid var(--border); color: var(--text);
       border-radius: 8px; padding: 0 14px; cursor: pointer;
     }
-    .search-results { margin-top: 8px; font-size: 0.78rem; color: var(--muted); max-height: 120px; overflow: auto; }
-    .meta { font-size: 0.72rem; color: var(--muted); margin-top: 8px; }
-    @media (max-width: 900px) {
-      .grid-top, .similar, .steps { grid-template-columns: 1fr; }
+    .search-results { margin-top: 8px; font-size: 0.78rem; color: var(--muted); max-height: 140px; overflow: auto; }
+    .search-hit { padding: 6px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .search-hit:hover { color: var(--text); }
+    .meta { font-size: 0.72rem; color: var(--muted); margin-top: 8px; line-height: 1.4; }
+    .evidence-list { font-size: 0.82rem; color: var(--muted); margin: 0; padding-left: 18px; }
+    .evidence-list li { margin: 4px 0; }
+    .alert-history { max-height: 200px; overflow: auto; font-size: 0.78rem; }
+    .alert-item { padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .alert-item strong { color: var(--text); }
+    .loader {
+      display: none; margin-top: 10px; font-size: 0.82rem; color: var(--accent);
+    }
+    .loader.on { display: block; }
+    @media (max-width: 960px) {
+      .grid-top, .similar, .steps, .two-col { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <div class="shell">
     <header>
-      <div class="brand">AISLEGUARD</div>
-      <div id="statusPill" class="status-pill"><span class="dot"></span> MONITORING</div>
+      <div class="header-row">
+        <div>
+          <div class="brand">AISLEGUARD</div>
+          <p class="tagline">
+            Video agent for warehouse aisles: Cosmos captions + hybrid VAST search,
+            YOLO detections, and W&amp;B reasoning to decide if worker–equipment proximity is a recurring hazard.
+          </p>
+          <div class="stack" id="stackChips">
+            <span class="chip">VAST Data · search &amp; retrieval</span>
+            <span class="chip">Video understanding · NVIDIA Cosmos</span>
+            <span class="chip">NVIDIA YOLO11 · ingest pipeline</span>
+            <span class="chip">Agent reasoning · Weights &amp; Biases</span>
+          </div>
+        </div>
+        <div id="statusPill" class="status-pill"><span class="dot"></span> MONITORING</div>
+      </div>
+      <div id="statusBar" class="status-bar">Loading stack status…</div>
     </header>
 
     <div class="grid-top">
       <div class="panel">
         <div class="video-wrap">
           <video id="mainVideo" controls playsinline muted preload="metadata"></video>
+          <canvas id="detCanvas"></canvas>
+          <div id="yoloBadge" class="yolo-badge" style="display:none">NVIDIA YOLO11 · detection overlay</div>
           <div id="videoLabel" class="video-label">warehouse3 · sdg_warehouse_cam-2</div>
         </div>
       </div>
@@ -120,33 +184,54 @@
         <div id="severityBadge" class="severity MEDIUM" style="display:none">MEDIUM</div>
         <ul id="eventChecks" class="checks"></ul>
         <button id="investigateBtn" class="btn">Run agent investigation</button>
+        <p id="loader" class="loader">Agent running: metadata → VAST search → similar clips → W&amp;B analysis…</p>
+        <p id="captionAttribution" class="meta" style="display:none">Video understanding · NVIDIA Cosmos (segment caption via VSS index)</p>
         <p id="searchMeta" class="meta"></p>
+        <ul id="evidenceList" class="evidence-list"></ul>
       </div>
     </div>
 
     <section class="panel" style="padding:14px 16px">
-      <h3>Agent investigation</h3>
+      <h3>Agent investigation pipeline</h3>
       <div id="agentSteps" class="steps"></div>
     </section>
 
     <section>
-      <h3>Similar incidents (VAST archive)</h3>
+      <h3>Similar incidents (VAST archive + curated history)</h3>
       <div id="similarGrid" class="similar"></div>
     </section>
 
-    <section id="conclusion" class="alert-box" style="display:none">
-      <h3>⚠ Recurring aisle hazard</h3>
-      <p id="patternSummary"></p>
-      <p id="recommendation"></p>
-      <div id="alertCreated" class="alert-created"></div>
-      <p id="reasoningMeta" class="meta"></p>
+    <div class="two-col">
+      <section id="conclusion" class="alert-box" style="display:none">
+        <h3 id="conclusionTitle">⚠ Safety conclusion</h3>
+        <p id="patternSummary"></p>
+        <p id="recommendation"></p>
+        <div id="alertCreated" class="alert-created"></div>
+        <p id="reasoningMeta" class="meta"></p>
+      </section>
+      <section class="panel" style="padding:14px 16px">
+        <h3 style="margin-top:0">Alert log (session)</h3>
+        <div id="alertHistory" class="alert-history"><span class="meta">No alerts yet — run investigation.</span></div>
+      </section>
+    </div>
+
+    <section class="panel" style="padding:14px 16px">
+      <h3>Ask the archive (VAST agent)</h3>
+      <p class="meta" style="margin:0 0 8px">Grounded Q&amp;A over indexed warehouse footage · VAST Data</p>
+      <div class="search-row">
+        <input id="askInput" placeholder="Ask about warehouse safety…" value="Have workers been near moving forklifts on sdg_warehouse_cam-2?" />
+        <button id="askBtn">Ask</button>
+      </div>
+      <p id="askAnswer" class="meta" style="margin-top:10px"></p>
+      <div id="askEvidence" class="search-results"></div>
     </section>
 
     <section class="panel" style="padding:14px 16px">
-      <h3>Optional — search warehouse footage</h3>
+      <h3>Explore warehouse archive</h3>
+      <p class="meta" style="margin:0 0 8px">Semantic / hybrid search · VAST Data</p>
       <div class="search-row">
-        <input id="searchInput" placeholder="Search warehouse footage…" value="worker close to forklift in aisle" />
-        <button id="searchBtn">Search</button>
+        <input id="searchInput" placeholder="Natural-language search…" value="worker close to forklift in aisle" />
+        <button id="searchBtn">Search VAST</button>
       </div>
       <div id="searchResults" class="search-results"></div>
     </section>
@@ -155,22 +240,121 @@
   <script>
     const APP_PREFIX = window.location.pathname.startsWith("/app") ? "/app" : "";
     const STEP_LABELS = {
-      event_understood: "Event understood",
-      archive_searched: "Historical archive searched",
-      similar_incidents_retrieved: "Similar incidents retrieved",
-      pattern_evaluated: "Pattern evaluated",
-      alert_created: "Safety alert generated",
+      event_understood: "Understand event (Cosmos + YOLO)",
+      archive_searched: "Search VAST archive",
+      similar_incidents_retrieved: "Retrieve similar incidents",
+      pattern_evaluated: "W&B pattern analysis",
+      alert_created: "Generate safety alert",
     };
+
+    let detectionFrames = [];
+    let detFps = 30;
+    let primarySource = null;
 
     function api(path) {
       const p = path.startsWith("/") ? path : `/${path}`;
       return `${APP_PREFIX}${p}`;
     }
 
-    function setMainVideo(url) {
+    function setMainVideo(url, label) {
       const v = document.getElementById("mainVideo");
       v.src = url;
       v.load();
+      if (label) document.getElementById("videoLabel").textContent = label;
+    }
+
+    function resizeCanvas() {
+      const v = document.getElementById("mainVideo");
+      const c = document.getElementById("detCanvas");
+      const wrap = v.parentElement;
+      c.width = wrap.clientWidth;
+      c.height = wrap.clientHeight;
+    }
+
+    function drawDetections(timeSec) {
+      const v = document.getElementById("mainVideo");
+      const c = document.getElementById("detCanvas");
+      const ctx = c.getContext("2d");
+      ctx.clearRect(0, 0, c.width, c.height);
+      if (!detectionFrames.length || !v.videoWidth) return;
+
+      let best = detectionFrames[0];
+      let bestDt = Math.abs((best.time_sec || 0) - timeSec);
+      for (const f of detectionFrames) {
+        const dt = Math.abs((f.time_sec || 0) - timeSec);
+        if (dt < bestDt) { best = f; bestDt = dt; }
+      }
+      if (bestDt > 0.35) return;
+
+      const vw = v.videoWidth, vh = v.videoHeight;
+      const scale = Math.min(c.width / vw, c.height / vh);
+      const dw = vw * scale, dh = vh * scale;
+      const ox = (c.width - dw) / 2, oy = (c.height - dh) / 2;
+
+      for (const det of (best.detections || [])) {
+        const [x1, y1, x2, y2] = det.bbox || [];
+        if (x1 == null) continue;
+        const color = det.label === "person" ? "#38bdf8" : "#fbbf24";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(
+          ox + x1 * scale, oy + y1 * scale,
+          (x2 - x1) * scale, (y2 - y1) * scale
+        );
+        ctx.fillStyle = color;
+        ctx.font = "11px IBM Plex Sans, sans-serif";
+        ctx.fillText(`${det.label} ${(det.confidence * 100).toFixed(0)}%`, ox + x1 * scale, oy + y1 * scale - 4);
+      }
+    }
+
+    function bindDetectionOverlay(frames, fps) {
+      detectionFrames = frames || [];
+      detFps = fps || 30;
+      const badge = document.getElementById("yoloBadge");
+      badge.style.display = detectionFrames.length ? "block" : "none";
+      badge.textContent = detectionFrames.length
+        ? `YOLO · ${detectionFrames.length} annotated frames`
+        : "";
+      resizeCanvas();
+      const v = document.getElementById("mainVideo");
+      v.onloadedmetadata = () => resizeCanvas();
+      v.ontimeupdate = () => drawDetections(v.currentTime);
+      window.addEventListener("resize", resizeCanvas);
+    }
+
+    async function loadStatus() {
+      try {
+        const res = await fetch(api("/api/status"));
+        const s = await res.json();
+        const arch = s.archive || {};
+        const wb = s.wandb_inference || {};
+        document.getElementById("statusBar").innerHTML =
+          `<span><strong>VSS</strong> ${s.vss?.reachable ? "connected" : "offline"}</span>` +
+          `<span><strong>Archive</strong> ${arch.indexed_clips ?? "—"} indexed clips · ${arch.unique_videos ?? "—"} videos</span>` +
+          `<span><strong>W&amp;B</strong> ${wb.reachable ? "inference ready" : (wb.configured ? "configured (check egress)" : "not configured")}</span>` +
+          `<span><strong>Alerts</strong> ${s.alerts_recorded ?? 0} this session</span>`;
+        document.querySelectorAll("#stackChips .chip").forEach(el => el.classList.add("on"));
+      } catch (e) {
+        document.getElementById("statusBar").textContent = "Status unavailable";
+      }
+    }
+
+    async function loadAlerts() {
+      const res = await fetch(api("/api/alerts"));
+      const data = await res.json();
+      const el = document.getElementById("alertHistory");
+      const items = data.alerts || [];
+      if (!items.length) {
+        el.innerHTML = '<span class="meta">No alerts yet — run investigation.</span>';
+        return;
+      }
+      el.innerHTML = items.map(a => `
+        <div class="alert-item">
+          <strong>${a.severity}</strong> · ${a.type}<br>
+          ${(a.finding || "").slice(0, 160)}…
+          <div class="meta">${a.created_at || ""}</div>
+        </div>
+      `).join("");
     }
 
     async function loadPrimary() {
@@ -178,19 +362,20 @@
       const data = await res.json();
       const primary = (data.clips || []).find(c => c.role === "primary");
       if (!primary) return;
-      setMainVideo(api(primary.video_url));
-      const t0 = primary.segment_start_sec ?? 0;
-      const t1 = primary.segment_end_sec ?? "";
-      document.getElementById("videoLabel").textContent =
-        `${primary.location || "warehouse3"} · ${primary.camera_id || "cam"} · ${t0}s–${t1}s`;
+      primarySource = primary.source;
+      setMainVideo(
+        api(primary.video_url),
+        `${primary.location || "warehouse3"} · ${primary.camera_id || "cam"} · ${primary.segment_start_sec ?? 0}s–${primary.segment_end_sec ?? ""}s`
+      );
     }
 
-    function renderInvestigationSteps(steps, doneThrough) {
+    function renderInvestigationSteps(steps, doneThrough, activeIndex) {
       const el = document.getElementById("agentSteps");
       el.innerHTML = (steps || []).map((s, i) => {
         const label = STEP_LABELS[s.id] || s.id;
         const done = i < doneThrough || s.status === "complete";
-        return `<div class="step ${done ? "done" : ""}">${done ? "✓ " : ""}${label}</div>`;
+        const active = i === activeIndex;
+        return `<div class="step ${done ? "done" : ""} ${active ? "active" : ""}">${done ? "✓ " : active ? "… " : ""}${label}</div>`;
       }).join("");
     }
 
@@ -198,9 +383,16 @@
 
     async function runInvestigation() {
       const btn = document.getElementById("investigateBtn");
+      const loader = document.getElementById("loader");
       btn.disabled = true;
+      loader.classList.add("on");
       document.getElementById("statusPill").className = "status-pill event";
       document.getElementById("statusPill").innerHTML = '<span class="dot"></span> EVENT DETECTED';
+
+      renderInvestigationSteps(
+        Object.keys(STEP_LABELS).map(id => ({ id, status: "pending" })),
+        0, 0
+      );
 
       const res = await fetch(api("/api/investigate"), {
         method: "POST",
@@ -211,7 +403,11 @@
       if (data.error) throw new Error(data.error);
 
       const steps = data.investigation_steps || [];
-      renderInvestigationSteps(steps, 0);
+      for (let i = 0; i < steps.length; i++) {
+        renderInvestigationSteps(steps, i, i);
+        await sleep(400);
+      }
+      renderInvestigationSteps(steps, steps.length, -1);
 
       document.getElementById("eventTitle").textContent = "⚠ Worker–forklift proximity event";
       const sev = document.getElementById("severityBadge");
@@ -224,45 +420,103 @@
         `<li class="on">${r}</li>`
       ).join("");
 
+      document.getElementById("captionAttribution").style.display = "block";
       document.getElementById("searchMeta").textContent =
-        `VAST search: "${data.search.query}" → ${data.search.result_count} live hits` +
+        `VAST Data hybrid search: "${data.search.query}" → ${data.search.result_count} hits` +
         (data.search.live === false ? " (degraded)" : "");
 
-      for (let i = 1; i <= steps.length; i++) {
-        await sleep(500);
-        renderInvestigationSteps(steps, i);
-      }
+      const ev = data.evidence || {};
+      const yolo = ev.yolo || {};
+      const oc = (ev.object_classes || []).join(", ");
+      document.getElementById("evidenceList").innerHTML = [
+        yolo.available ? `<li>YOLO detections: ${JSON.stringify(yolo.object_counts || {})}</li>` : "",
+        oc ? `<li>Indexed object classes: ${oc}</li>` : "",
+        yolo.proximity_signal ? "<li>Co-detection signal: person + equipment in frame</li>" : "",
+      ].filter(Boolean).join("");
+
+      bindDetectionOverlay(
+        (data.detections && data.detections.frames) || [],
+        data.detections && data.detections.fps
+      );
+      setMainVideo(api(data.incident.video_url), document.getElementById("videoLabel").textContent);
 
       const grid = document.getElementById("similarGrid");
-      grid.innerHTML = (data.similar_incidents || []).map((c, idx) => `
-        <div class="card">
-          <video controls playsinline muted preload="metadata" src="${api(c.video_url)}"></video>
+      grid.innerHTML = (data.similar_incidents || []).map(c => `
+        <div class="card" data-url="${api(c.video_url)}" data-label="${c.id}">
+          <video muted preload="metadata" src="${api(c.video_url)}"></video>
           <div class="card-body">
-            <strong>${c.id} · similarity ${c.similarity != null ? c.similarity.toFixed(3) : "—"}</strong>
-            ${(c.description || "").slice(0, 220)}…
+            <strong>${c.id} · sim ${c.similarity != null ? c.similarity.toFixed(3) : "curated"}</strong>
+            ${(c.description || "").slice(0, 220)}${(c.description || "").length > 220 ? "…" : ""}
           </div>
         </div>
       `).join("");
+      grid.querySelectorAll(".card").forEach(card => {
+        card.addEventListener("click", () => {
+          setMainVideo(card.dataset.url, card.dataset.label + " · similar incident");
+        });
+      });
 
-      document.getElementById("conclusion").style.display = "block";
+      const box = document.getElementById("conclusion");
+      box.style.display = "block";
+      box.className = "alert-box" + (data.incident.severity === "MEDIUM" ? " medium" : "");
+      document.getElementById("conclusionTitle").textContent =
+        data.analysis.recurring_pattern
+          ? "⚠ Recurring aisle hazard (pattern in archive)"
+          : "Investigation conclusion";
       document.getElementById("patternSummary").textContent = data.analysis.pattern_summary || "";
       document.getElementById("recommendation").textContent = data.analysis.recommendation || "";
       document.getElementById("reasoningMeta").textContent =
         data.analysis.analysis_source === "wandb"
-          ? "Reasoning: Weights & Biases Serverless Inference"
-          : "Reasoning: evidence-based fallback (VAST captions preserved)";
+          ? `Agent reasoning · Weights & Biases Serverless (${data.analysis.model || "LLM"}) · GPU inference on CoreWeave-backed endpoints`
+          : "Reasoning: evidence-based fallback (VAST captions preserved) — check W&B connectivity";
 
-      const alertEl = document.getElementById("alertCreated");
-      alertEl.textContent = data.action?.status === "CREATED"
-        ? "SAFETY ALERT CREATED ✓"
+      document.getElementById("alertCreated").textContent = data.action?.status === "CREATED"
+        ? `SAFETY ALERT CREATED ✓ · ${data.action.id?.slice(0, 8) || ""}`
         : "Alert not created (below threshold)";
+
+      loader.classList.remove("on");
       btn.disabled = false;
+      loadStatus();
+      loadAlerts();
     }
 
     document.getElementById("investigateBtn").addEventListener("click", () => {
       runInvestigation().catch(err => {
         alert(err.message);
         document.getElementById("investigateBtn").disabled = false;
+        document.getElementById("loader").classList.remove("on");
+      });
+    });
+
+    document.getElementById("askBtn").addEventListener("click", async () => {
+      const q = document.getElementById("askInput").value.trim();
+      if (!q) return;
+      document.getElementById("askAnswer").textContent = "Querying VAST agent…";
+      document.getElementById("askEvidence").innerHTML = "";
+      const res = await fetch(api("/api/ask-archive"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        document.getElementById("askAnswer").textContent = data.error;
+        return;
+      }
+      document.getElementById("askAnswer").textContent = data.answer || "(no answer)";
+      document.getElementById("askEvidence").innerHTML =
+        (data.chunks || []).slice(0, 4).map(ch =>
+          `<div class="search-hit" data-url="${ch.video_url ? api(ch.video_url) : ""}">
+            • ${(ch.similarity_score || 0).toFixed(3)} — ${ch.filename || "segment"}<br>${(ch.description || "").slice(0, 140)}…
+          </div>`
+        ).join("");
+      document.querySelectorAll("#askEvidence .search-hit").forEach(hit => {
+        hit.addEventListener("click", () => {
+          if (hit.dataset.url) {
+            setMainVideo(hit.dataset.url, "VAST agent evidence");
+            bindDetectionOverlay([]);
+          }
+        });
       });
     });
 
@@ -275,12 +529,24 @@
       });
       const data = await res.json();
       document.getElementById("searchResults").innerHTML =
-        (data.results || []).slice(0, 5).map(r =>
-          `<div>• ${(r.similarity_score || 0).toFixed(3)} — ${r.filename}<br>${(r.description || "").slice(0, 120)}…</div>`
+        (data.results || []).slice(0, 6).map(r =>
+          `<div class="search-hit" data-url="${r.video_url ? api(r.video_url) : ""}">
+            • ${(r.similarity_score || 0).toFixed(3)} — ${r.filename}<br>${(r.description || "").slice(0, 120)}…
+          </div>`
         ).join("") || "No results";
+      document.querySelectorAll(".search-hit").forEach(hit => {
+        hit.addEventListener("click", () => {
+          if (hit.dataset.url) {
+            setMainVideo(hit.dataset.url, "VAST search hit");
+            bindDetectionOverlay([]);
+          }
+        });
+      });
     });
 
     loadPrimary().catch(console.error);
+    loadStatus();
+    loadAlerts();
   </script>
 </body>
 </html>

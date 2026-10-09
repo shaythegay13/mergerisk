@@ -16,11 +16,58 @@ INDEX_HTML = APP_DIR / "index.html"
 ensure_vss_env()
 vss = VssClient()
 app = Flask(__name__)
+ALERTS = []
+MAX_ALERTS = 25
 
 
 @app.get("/health")
 def health():
     return jsonify({"ok": True})
+
+
+def _wandb_status():
+    import urllib.error
+    import urllib.request
+
+    key = os.environ.get("WANDB_API_KEY")
+    if not key:
+        return {"configured": False, "reachable": False}
+    req = urllib.request.Request(
+        "https://api.inference.wandb.ai/v1/models",
+        headers={"Authorization": f"Bearer {key}"},
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            return {"configured": True, "reachable": resp.status == 200}
+    except urllib.error.HTTPError as exc:
+        return {"configured": True, "reachable": False, "http_status": exc.code}
+    except OSError:
+        return {"configured": True, "reachable": False}
+
+
+@app.get("/api/status")
+def api_status():
+    backend_ok = False
+    try:
+        vss.vss_login()
+        backend_ok = True
+    except Exception:  # noqa: BLE001
+        backend_ok = False
+    return jsonify(
+        {
+            "service": "aisleguard",
+            "vss": {"reachable": backend_ok},
+            "wandb_inference": _wandb_status(),
+            "archive": vss.dashboard_overview(),
+            "alerts_recorded": len(ALERTS),
+        }
+    )
+
+
+@app.get("/api/alerts")
+def api_alerts():
+    return jsonify({"alerts": list(reversed(ALERTS))})
 
 
 @app.get("/api/config")
@@ -71,7 +118,13 @@ def api_investigate():
     body = request.get_json(silent=True) or {}
     primary_id = body.get("primary_clip_id")
     try:
-        return jsonify(run_investigation(vss, primary_id=primary_id))
+        result = run_investigation(vss, primary_id=primary_id)
+        action = result.get("action") or {}
+        if action.get("status") == "CREATED":
+            ALERTS.append(action)
+            if len(ALERTS) > MAX_ALERTS:
+                del ALERTS[: len(ALERTS) - MAX_ALERTS]
+        return jsonify(result)
     except KeyError:
         return jsonify({"error": "unknown primary clip id"}), 400
     except Exception as exc:  # noqa: BLE001
@@ -107,6 +160,38 @@ def api_video():
         generate(),
         status=upstream.status_code,
         headers=headers,
+    )
+
+
+@app.post("/api/ask-archive")
+def api_ask_archive():
+    body = request.get_json(silent=True) or {}
+    question = (body.get("question") or "").strip()
+    if not question:
+        return jsonify({"error": "question required"}), 400
+    data = vss.agent_search_and_answer(question)
+    if data.get("error") and not data.get("answer"):
+        return jsonify(data), 502
+    evidence = data.get("evidence") or {}
+    chunks = []
+    for ch in evidence.get("chunks") or []:
+        src = ch.get("preview_source") or ch.get("source")
+        chunks.append(
+            {
+                "similarity_score": ch.get("similarity_score"),
+                "description": (ch.get("reasoning_content") or ch.get("description") or "")[:280],
+                "video_url": video_url(src) if src else None,
+                "filename": ch.get("filename"),
+            }
+        )
+    return jsonify(
+        {
+            "question": question,
+            "answer": data.get("answer"),
+            "tool_used": data.get("tool_used"),
+            "source": "vast_agent",
+            "chunks": chunks,
+        }
     )
 
 

@@ -1,6 +1,7 @@
 import urllib.parse
 
 from clips import SEARCH_QUERY, historical_clips, primary_clip
+from detections import summarize_detections
 from reasoning import _observable_reasons, build_alert, run_reasoning
 from vss import enrich_clip, merge_historical_with_search
 
@@ -20,6 +21,8 @@ def run_investigation(vss, primary_id=None):
 
     primary_cfg = primary_clip(primary_id)
     primary = enrich_clip(vss, primary_cfg)
+    det_raw = vss.get_detections(primary["source"])
+    detections = summarize_detections(det_raw)
     steps[0]["status"] = "complete"
 
     search = vss.search_similar_events(SEARCH_QUERY)
@@ -31,7 +34,7 @@ def run_investigation(vss, primary_id=None):
         item["video_url"] = video_url(item["source"])
     steps[2]["status"] = "complete"
 
-    reasoning = run_reasoning(primary, similar, search)
+    reasoning = run_reasoning(primary, similar, search, detections)
     steps[3]["status"] = "complete"
 
     action = build_alert(reasoning)
@@ -63,6 +66,31 @@ def run_investigation(vss, primary_id=None):
             "pattern_summary": reasoning.get("pattern_summary", ""),
             "recommendation": reasoning.get("recommendation", ""),
             "analysis_source": reasoning.get("analysis_source", "fallback"),
+            "model": reasoning.get("model"),
         },
+        "evidence": {
+            "yolo": {
+                "available": detections.get("available"),
+                "object_counts": detections.get("object_counts"),
+                "co_presence_frames": detections.get("co_presence_frames"),
+                "proximity_signal": detections.get("proximity_signal"),
+            },
+            "vast_caption": primary.get("description", ""),
+            "object_classes": primary.get("object_classes"),
+        },
+        "detections": _public_detections(detections),
         "action": action,
     }
+
+
+def _public_detections(summary):
+    """Frame list for UI overlay (frames that contain at least one detection)."""
+    if not summary.get("available"):
+        return {"frames": []}
+    frames = []
+    for frame in summary.get("frames") or []:
+        dets = frame.get("detections") or []
+        if not dets:
+            continue
+        frames.append({"time_sec": frame.get("time_sec"), "detections": dets})
+    return {"fps": summary.get("fps"), "frames": frames}
