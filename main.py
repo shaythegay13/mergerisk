@@ -101,6 +101,17 @@ def briefing():
     return jsonify({"error": "briefing page missing"}), 404
 
 
+@app.get("/realtime-agent-hackathon.png")
+@app.get("/realtime-agent-hackathon.avif")
+def briefing_hero_image():
+    name = "realtime-agent-hackathon.png"
+    if not (APP_DIR / name).is_file():
+        name = "realtime-agent-hackathon.avif"
+    if (APP_DIR / name).is_file():
+        return send_from_directory(APP_DIR, name)
+    return jsonify({"error": "image missing"}), 404
+
+
 @app.get("/api/clips")
 def api_clips():
     clips = []

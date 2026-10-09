@@ -37,6 +37,20 @@
       background: var(--panel);
     }
     .nav-link:hover { color: var(--text); border-color: #3a4f6a; }
+    .hero-image-wrap {
+      margin: 0 0 22px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0e1520;
+    }
+    .hero-image-wrap img {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 360px;
+      object-fit: cover;
+    }
     .hero-label {
       font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em;
       text-transform: uppercase; color: var(--muted); margin: 0 0 8px;
@@ -126,6 +140,10 @@
 </head>
 <body>
   <div class="shell">
+    <div class="hero-image-wrap">
+      <img id="heroImage" src="/realtime-agent-hackathon.png" alt="Realtime agent hackathon" />
+    </div>
+
     <header>
       <div class="brand">AISLEGUARD</div>
       <a class="nav-link" id="backLink" href="./">← Back to demo</a>
@@ -347,6 +365,7 @@
   <script>
     const APP_PREFIX = window.location.pathname.startsWith("/app") ? "/app" : "";
     document.getElementById("backLink").href = `${APP_PREFIX}/`;
+    document.getElementById("heroImage").src = `${APP_PREFIX}/realtime-agent-hackathon.png`;
   </script>
 </body>
 </html>
