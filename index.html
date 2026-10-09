@@ -278,6 +278,37 @@
       return `${APP_PREFIX}${p}`;
     }
 
+    /** VAST metadata may send object_classes as array, string, or class→count map. */
+    function normalizeObjectClasses(value) {
+      if (value == null) return [];
+      if (Array.isArray(value)) return value.map(String);
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (!trimmed) return [];
+        if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+          try {
+            return normalizeObjectClasses(JSON.parse(trimmed));
+          } catch (_) {
+            /* fall through */
+          }
+        }
+        return trimmed.split(",").map(v => v.trim()).filter(Boolean);
+      }
+      if (typeof value === "object") {
+        if (Array.isArray(value.object_classes)) {
+          return normalizeObjectClasses(value.object_classes);
+        }
+        if (Array.isArray(value.classes)) {
+          return normalizeObjectClasses(value.classes);
+        }
+        if (Array.isArray(value.labels)) {
+          return normalizeObjectClasses(value.labels);
+        }
+        return Object.keys(value);
+      }
+      return [];
+    }
+
     function setMainVideo(url, label) {
       const v = document.getElementById("mainVideo");
       v.src = url;
@@ -449,7 +480,7 @@
 
       const ev = data.evidence || {};
       const yolo = ev.yolo || {};
-      const oc = (ev.object_classes || []).join(", ");
+      const oc = normalizeObjectClasses(ev.object_classes).join(", ");
       document.getElementById("evidenceList").innerHTML = [
         yolo.available ? `<li>YOLO detections: ${JSON.stringify(yolo.object_counts || {})}</li>` : "",
         oc ? `<li>Indexed object classes: ${oc}</li>` : "",
