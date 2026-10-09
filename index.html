@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AisleGuard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b1117;
+      --panel: #121a24;
+      --border: #243044;
+      --text: #e8eef7;
+      --muted: #8fa3bf;
+      --ok: #22c55e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", system-ui, sans-serif;
+      background: radial-gradient(1200px 600px at 10% -10%, #1a2740 0%, var(--bg) 55%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .shell { max-width: 1200px; margin: 0 auto; padding: 20px 24px 40px; }
+    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .brand { font-size: 1.35rem; font-weight: 700; letter-spacing: 0.04em; }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 999px;
+      background: #0f2a1a; border: 1px solid #1f5c36; color: #86efac;
+      font-size: 0.8rem; font-weight: 600;
+    }
+    .status-pill.event { background: #2a1a0f; border-color: #7c4a12; color: #fcd34d; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .grid-top { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .video-wrap { position: relative; background: #000; aspect-ratio: 16/10; }
+    video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+    .video-label {
+      position: absolute; left: 12px; bottom: 12px;
+      background: rgba(0,0,0,.65); padding: 4px 10px; border-radius: 6px;
+      font-size: 0.75rem; color: #cbd5e1;
+    }
+    .side { padding: 16px 18px; }
+    .side h2 { margin: 0 0 8px; font-size: 1rem; }
+    .severity {
+      display: inline-block; margin: 8px 0 12px;
+      padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.85rem;
+    }
+    .severity.HIGH { background: #3f1212; color: #fecaca; border: 1px solid #7f1d1d; }
+    .severity.MEDIUM { background: #3f2a0a; color: #fde68a; border: 1px solid #92400e; }
+    .severity.LOW { background: #0f2a1a; color: #bbf7d0; border: 1px solid #166534; }
+    ul.checks { list-style: none; padding: 0; margin: 0; }
+    ul.checks li { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; color: var(--muted); }
+    ul.checks li.on { color: var(--text); }
+    ul.checks li.on::before { content: "✓ "; color: var(--ok); font-weight: 700; }
+    .btn {
+      margin-top: 14px; width: 100%;
+      background: linear-gradient(180deg, #2563eb, #1d4ed8);
+      color: white; border: none; border-radius: 8px;
+      padding: 12px 16px; font-weight: 600; cursor: pointer;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    section { margin-top: 16px; }
+    section h3 {
+      margin: 0 0 10px; font-size: 0.95rem; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--muted);
+    }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .step {
+      padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+      font-size: 0.78rem; color: var(--muted); min-height: 52px;
+    }
+    .step.done { border-color: #166534; color: #bbf7d0; background: #0f1f16; }
+    .similar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: #0e1520; }
+    .card video { aspect-ratio: 16/10; width: 100%; }
+    .card-body { padding: 10px 12px; font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
+    .card-body strong { color: var(--text); display: block; margin-bottom: 4px; font-size: 0.72rem; }
+    .alert-box {
+      margin-top: 16px; padding: 16px 18px; border-radius: 12px;
+      border: 1px solid #7f1d1d; background: linear-gradient(180deg, #1f1010, #140c0c);
+    }
+    .alert-box h3 { color: #fecaca; margin: 0 0 8px; }
+    .alert-created { margin-top: 12px; font-weight: 700; color: var(--ok); }
+    .search-row { display: flex; gap: 8px; margin-top: 8px; }
+    .search-row input {
+      flex: 1; background: #0e1520; border: 1px solid var(--border);
+      color: var(--text); border-radius: 8px; padding: 10px 12px;
+    }
+    .search-row button {
+      background: #1e293b; border: 1px solid var(--border); color: var(--text);
+      border-radius: 8px; padding: 0 14px; cursor: pointer;
+    }
+    .search-results { margin-top: 8px; font-size: 0.78rem; color: var(--muted); max-height: 120px; overflow: auto; }
+    .meta { font-size: 0.72rem; color: var(--muted); margin-top: 8px; }
+    @media (max-width: 900px) {
+      .grid-top, .similar, .steps { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">AISLEGUARD</div>
+      <div id="statusPill" class="status-pill"><span class="dot"></span> MONITORING</div>
+    </header>
+
+    <div class="grid-top">
+      <div class="panel">
+        <div class="video-wrap">
+          <video id="mainVideo" controls playsinline muted preload="metadata"></video>
+          <div id="videoLabel" class="video-label">warehouse3 · sdg_warehouse_cam-2</div>
+        </div>
+      </div>
+      <div class="panel side">
+        <h2 id="eventTitle">Live warehouse aisle monitoring</h2>
+        <div id="severityBadge" class="severity MEDIUM" style="display:none">MEDIUM</div>
+        <ul id="eventChecks" class="checks"></ul>
+        <button id="investigateBtn" class="btn">Run agent investigation</button>
+        <p id="searchMeta" class="meta"></p>
+      </div>
+    </div>
+
+    <section class="panel" style="padding:14px 16px">
+      <h3>Agent investigation</h3>
+      <div id="agentSteps" class="steps"></div>
+    </section>
+
+    <section>
+      <h3>Similar incidents (VAST archive)</h3>
+      <div id="similarGrid" class="similar"></div>
+    </section>
+
+    <section id="conclusion" class="alert-box" style="display:none">
+      <h3>⚠ Recurring aisle hazard</h3>
+      <p id="patternSummary"></p>
+      <p id="recommendation"></p>
+      <div id="alertCreated" class="alert-created"></div>
+      <p id="reasoningMeta" class="meta"></p>
+    </section>
+
+    <section class="panel" style="padding:14px 16px">
+      <h3>Optional — search warehouse footage</h3>
+      <div class="search-row">
+        <input id="searchInput" placeholder="Search warehouse footage…" value="worker close to forklift in aisle" />
+        <button id="searchBtn">Search</button>
+      </div>
+      <div id="searchResults" class="search-results"></div>
+    </section>
+  </div>
+
+  <script>
+    const APP_PREFIX = window.location.pathname.startsWith("/app") ? "/app" : "";
+    const STEP_LABELS = {
+      event_understood: "Event understood",
+      archive_searched: "Historical archive searched",
+      similar_incidents_retrieved: "Similar incidents retrieved",
+      pattern_evaluated: "Pattern evaluated",
+      alert_created: "Safety alert generated",
+    };
+
+    function api(path) {
+      const p = path.startsWith("/") ? path : `/${path}`;
+      return `${APP_PREFIX}${p}`;
+    }
+
+    function setMainVideo(url) {
+      const v = document.getElementById("mainVideo");
+      v.src = url;
+      v.load();
+    }
+
+    async function loadPrimary() {
+      const res = await fetch(api("/api/clips"));
+      const data = await res.json();
+      const primary = (data.clips || []).find(c => c.role === "primary");
+      if (!primary) return;
+      setMainVideo(api(primary.video_url));
+      const t0 = primary.segment_start_sec ?? 0;
+      const t1 = primary.segment_end_sec ?? "";
+      document.getElementById("videoLabel").textContent =
+        `${primary.location || "warehouse3"} · ${primary.camera_id || "cam"} · ${t0}s–${t1}s`;
+    }
+
+    function renderInvestigationSteps(steps, doneThrough) {
+      const el = document.getElementById("agentSteps");
+      el.innerHTML = (steps || []).map((s, i) => {
+        const label = STEP_LABELS[s.id] || s.id;
+        const done = i < doneThrough || s.status === "complete";
+        return `<div class="step ${done ? "done" : ""}">${done ? "✓ " : ""}${label}</div>`;
+      }).join("");
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    async function runInvestigation() {
+      const btn = document.getElementById("investigateBtn");
+      btn.disabled = true;
+      document.getElementById("statusPill").className = "status-pill event";
+      document.getElementById("statusPill").innerHTML = '<span class="dot"></span> EVENT DETECTED';
+
+      const res = await fetch(api("/api/investigate"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      const steps = data.investigation_steps || [];
+      renderInvestigationSteps(steps, 0);
+
+      document.getElementById("eventTitle").textContent = "⚠ Worker–forklift proximity event";
+      const sev = document.getElementById("severityBadge");
+      sev.style.display = "inline-block";
+      sev.textContent = data.incident.severity;
+      sev.className = "severity " + data.incident.severity;
+
+      const checks = document.getElementById("eventChecks");
+      checks.innerHTML = (data.incident.observable_reasons || []).map(r =>
+        `<li class="on">${r}</li>`
+      ).join("");
+
+      document.getElementById("searchMeta").textContent =
+        `VAST search: "${data.search.query}" → ${data.search.result_count} live hits` +
+        (data.search.live === false ? " (degraded)" : "");
+
+      for (let i = 1; i <= steps.length; i++) {
+        await sleep(500);
+        renderInvestigationSteps(steps, i);
+      }
+
+      const grid = document.getElementById("similarGrid");
+      grid.innerHTML = (data.similar_incidents || []).map((c, idx) => `
+        <div class="card">
+          <video controls playsinline muted preload="metadata" src="${api(c.video_url)}"></video>
+          <div class="card-body">
+            <strong>${c.id} · similarity ${c.similarity != null ? c.similarity.toFixed(3) : "—"}</strong>
+            ${(c.description || "").slice(0, 220)}…
+          </div>
+        </div>
+      `).join("");
+
+      document.getElementById("conclusion").style.display = "block";
+      document.getElementById("patternSummary").textContent = data.analysis.pattern_summary || "";
+      document.getElementById("recommendation").textContent = data.analysis.recommendation || "";
+      document.getElementById("reasoningMeta").textContent =
+        data.analysis.analysis_source === "wandb"
+          ? "Reasoning: Weights & Biases Serverless Inference"
+          : "Reasoning: evidence-based fallback (VAST captions preserved)";
+
+      const alertEl = document.getElementById("alertCreated");
+      alertEl.textContent = data.action?.status === "CREATED"
+        ? "SAFETY ALERT CREATED ✓"
+        : "Alert not created (below threshold)";
+      btn.disabled = false;
+    }
+
+    document.getElementById("investigateBtn").addEventListener("click", () => {
+      runInvestigation().catch(err => {
+        alert(err.message);
+        document.getElementById("investigateBtn").disabled = false;
+      });
+    });
+
+    document.getElementById("searchBtn").addEventListener("click", async () => {
+      const q = document.getElementById("searchInput").value;
+      const res = await fetch(api("/api/search"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: q }),
+      });
+      const data = await res.json();
+      document.getElementById("searchResults").innerHTML =
+        (data.results || []).slice(0, 5).map(r =>
+          `<div>• ${(r.similarity_score || 0).toFixed(3)} — ${r.filename}<br>${(r.description || "").slice(0, 120)}…</div>`
+        ).join("") || "No results";
+    });
+
+    loadPrimary().catch(console.error);
+  </script>
+</body>
+</html>
